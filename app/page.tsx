@@ -1,65 +1,142 @@
-import Image from "next/image";
+"use client"
+import { useState, useEffect } from 'react';
+import WorldGlobe from './components/Globe';
+import LatencyChart from './components/LatencyChart';
+import Legend from './components/Legend';
+import Controls from './components/Controls';
 
 export default function Home() {
+  const [providerFilter, setProviderFilter] = useState<Record<string, boolean>>({ AWS: true, Azure: true, GCP: true });
+  const [showRegions, setShowRegions] = useState(true);
+  const [showRealtime, setShowRealtime] = useState(true);
+  const [selectedPair, setSelectedPair] = useState<string>('Binance-OKX');
+  const [selectedRange, setSelectedRange] = useState<string>('1h');
+  const [isMobile, setIsMobile] = useState(false);
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') document.body.dataset.theme = isDark ? 'dark' : 'light';
+  }, [isDark]);
+
+  const exportGlobeImage = () => {
+    try {
+      const container = document.getElementById('globe-container');
+      const canvas = container?.querySelector('canvas') as HTMLCanvasElement | null;
+      if (!canvas) return alert('Globe canvas not found');
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `globe-snapshot-${Date.now()}.png`;
+      a.click();
+    } catch (e) { console.error(e); }
+  };
+
+  const exportLatencyJSON = async () => {
+    try {
+      const res = await fetch('/api/latency');
+      const json = await res.json();
+      const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `latency-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) { console.error(e); }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main style={{
+      textAlign: 'center',
+      background: '#0b0f1a',
+      color: 'white',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100vh',
+      overflow: 'hidden',
+    }}>
+      <header style={{
+        height: 60,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#01020f',
+        color: '#00e6ff',
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+      }}>
+        🌐 Latency Topology Visualizer
+      </header>
+
+      <div style={{
+        display: 'flex',
+        flex: 1,
+        flexDirection: isMobile ? 'column' : 'row',
+        backgroundColor: '#000010',
+        overflow: 'auto',
+      }}>
+        <div style={{
+          flex: isMobile ? 'none' : 1,
+          height: isMobile ? '50vh' : 'auto',
+          padding: isMobile ? '10px' : '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        }}>
+          <WorldGlobe
+            id="globe-container"
+            providerFilter={providerFilter}
+            showRegions={showRegions}
+            showRealtime={showRealtime}
+            highlightedPair={selectedPair}
+            isMobile={isMobile}
+            isDark={isDark}
+          />
+          <Legend isMobile={isMobile} />
+          <Controls
+            providerFilter={providerFilter}
+            setProviderFilter={setProviderFilter}
+            showRegions={showRegions}
+            setShowRegions={setShowRegions}
+            showRealtime={showRealtime}
+            setShowRealtime={setShowRealtime}
+            isMobile={isMobile}
+            isDark={isDark}
+            setIsDark={setIsDark}
+            onExportGlobe={exportGlobeImage}
+            onExportLatency={exportLatencyJSON}
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div style={{
+          flex: isMobile ? 'none' : 1,
+          height: isMobile ? '50vh' : 'auto',
+          padding: isMobile ? '10px' : '20px',
+          backgroundColor: isMobile ? '#000012' : '#050510',
+          borderLeft: isMobile ? 'none' : '1px solid #00e6ff',
+          borderTop: isMobile ? '1px solid #00e6ff' : 'none',
+          boxShadow: isMobile ? '0 -2px 20px rgba(0,230,255,0.12)' : '-2px 0 20px rgba(0,230,255,0.12)',
+        }}>
+          <LatencyChart
+            pair={selectedPair}
+            range={selectedRange}
+            onPairChange={(p) => setSelectedPair(p)}
+            onRangeChange={(r) => setSelectedRange(r)}
+            isMobile={isMobile}
+            isDark={isDark}
+          />
         </div>
-      </main>
-    </div>
+      </div>
+
+      <footer style={{ height: isMobile ? 30 : 40, backgroundColor: '#000010' }} />
+    </main>
   );
 }
