@@ -1,4 +1,4 @@
-// ...existing code...
+
 import { NextResponse } from 'next/server';
 import { exchanges } from './exchanges';
 import { simulateHistory, simulateLatency } from './latencySimulator';

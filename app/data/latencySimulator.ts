@@ -1,4 +1,4 @@
-// ...existing code...
+
 export const simulateLatency = (a: string, b: string) => {
   const seed = Array.from(a + b).reduce((s, ch) => s + ch.charCodeAt(0), 0);
   const base = (seed % 120) + 10;
